@@ -4,6 +4,7 @@ from app.analytics.volatility import calculate_volatility
 from app.analytics.trend import detect_trend
 from app.analytics.regime import detect_regime
 from app.models.exchange_rate import ExchangeRate
+from app.analytics.rates import get_cross_rates
 
 
 router = APIRouter()
@@ -94,24 +95,44 @@ def history(base: str, target: str, days: int = 30):
 
     db = SessionLocal()
 
-    rates = (
-        db.query(ExchangeRate)
-        .filter(
-            ExchangeRate.base_currency == base,
-            ExchangeRate.target_currency == target
-        )
-        .order_by(ExchangeRate.date.desc())
-        .limit(days)
-        .all()
-    )
+    series = get_cross_rates(db, base, target)
 
     db.close()
+
+    if not series:
+        return {"error": "Currency pair not found"}
+
+    series = series[-days:]
 
     return {
         "base": base,
         "target": target,
         "rates": [
-            {"date": r.date, "rate": r.rate}
-            for r in rates
+            {"date": d, "rate": r}
+            for d, r in series
         ]
     }
+
+
+@router.get("/currencies")
+def get_currencies():
+
+    db = SessionLocal()
+
+    # find most recent date in dataset
+    latest_date = db.query(ExchangeRate.date).order_by(ExchangeRate.date.desc()).first()[0]
+
+    currencies = (
+        db.query(ExchangeRate.target_currency)
+        .filter(ExchangeRate.date == latest_date)
+        .distinct()
+        .all()
+    )
+
+    db.close()
+
+    currency_list = sorted([c[0] for c in currencies])
+
+    currency_list.insert(0, "EUR")
+
+    return {"currencies": currency_list}

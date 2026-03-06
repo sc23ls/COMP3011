@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Forex Analytics Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    margin:40px;
+}
+
+input, select, button{
+    padding:8px;
+    margin:5px;
+}
+
+button{
+    cursor:pointer;
+}
+
+.results{
+    margin-top:20px;
+}
+
+canvas{
+    margin-top:20px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Forex Analytics Dashboard</h1>
+
+<div>
+
+<label>Base currency:</label>
+<select id="base"></select>
+
+<label>Target currency:</label>
+<select id="target"></select>
+
+<label>Amount:</label>
+<input id="amount" type="number" value="100">
+
+<button onclick="convert()">Convert</button>
+
+</div>
+
+<div class="results">
+
+<h2>Results</h2>
+
+<p id="conversion"></p>
+<p id="volatility"></p>
+<p id="trend"></p>
+<p id="regime"></p>
+
+</div>
+
+<h2>Exchange Rate History (Latest 30 Observations)</h2>
+
+<canvas id="priceChart" width="600" height="300"></canvas>
+
+<script>
+
+const API = "http://127.0.0.1:8000"
+
+
+async function loadCurrencies(){
+
+    let response = await fetch(`${API}/currencies`)
+    let data = await response.json()
+
+    let baseSelect = document.getElementById("base")
+    let targetSelect = document.getElementById("target")
+
+    data.currencies.forEach(currency => {
+
+        let option1 = document.createElement("option")
+        option1.value = currency
+        option1.text = currency
+        baseSelect.appendChild(option1)
+
+        let option2 = document.createElement("option")
+        option2.value = currency
+        option2.text = currency
+        targetSelect.appendChild(option2)
+
+    })
+
+}
+
+
+function trendArrow(trend){
+
+    if(trend === "uptrend") return "↑ Uptrend"
+    if(trend === "downtrend") return "↓ Downtrend"
+    return "→ Stable"
+
+}
+
+
+async function convert(){
+
+    let base = document.getElementById("base").value
+    let target = document.getElementById("target").value
+    let amount = document.getElementById("amount").value
+
+    document.getElementById("conversion").innerText = "Loading..."
+    document.getElementById("volatility").innerText = ""
+    document.getElementById("trend").innerText = ""
+    document.getElementById("regime").innerText = ""
+
+    try{
+
+        let conversion = await fetch(`${API}/convert?base=${base}&target=${target}&amount=${amount}`)
+        let convData = await conversion.json()
+
+        document.getElementById("conversion").innerText =
+            "Converted amount: " + convData.converted
+
+
+        let vol = await fetch(`${API}/volatility?base=${base}&target=${target}`)
+        let volData = await vol.json()
+
+        document.getElementById("volatility").innerText =
+            "Volatility: " + volData.volatility
+
+
+        let trend = await fetch(`${API}/trend?base=${base}&target=${target}`)
+        let trendData = await trend.json()
+
+        document.getElementById("trend").innerText =
+            "Trend: " + trendArrow(trendData.trend)
+
+
+        let regime = await fetch(`${API}/regime?base=${base}&target=${target}`)
+        let regimeData = await regime.json()
+
+        document.getElementById("regime").innerText =
+            "Market regime: " + regimeData.regime
+
+
+        loadHistory(base, target)
+
+    }
+    catch(err){
+
+        document.getElementById("conversion").innerText =
+            "Error contacting API"
+
+    }
+
+}
+
+
+async function loadHistory(base, target){
+
+    let response = await fetch(`${API}/history?base=${base}&target=${target}&days=30`)
+    let data = await response.json()
+
+    let dates = data.rates.map(r => r.date)
+    let prices = data.rates.map(r => r.rate)
+
+    const ctx = document.getElementById('priceChart').getContext('2d')
+
+    if(window.chart){
+        window.chart.destroy()
+    }
+
+    window.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates.reverse(),
+            datasets: [{
+                label: `${base}/${target}`,
+                data: prices.reverse(),
+                borderColor: 'blue',
+                borderWidth: 2,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    })
+
+}
+
+
+loadCurrencies()
+
+</script>
+
+</body>
+
+</html>

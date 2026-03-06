@@ -6,7 +6,10 @@ def get_cross_rates(db, base, target):
     base = base.upper()
     target = target.upper()
 
-    # direct case (EUR base)
+    if base == target:
+        return []
+
+    # EUR → target
     if base == "EUR":
         rates = (
             db.query(ExchangeRate.date, ExchangeRate.rate)
@@ -17,8 +20,9 @@ def get_cross_rates(db, base, target):
             .order_by(ExchangeRate.date)
             .all()
         )
-        return [r.rate for r in rates]
+        return [(r.date, r.rate) for r in rates]
 
+    # base → EUR
     if target == "EUR":
         rates = (
             db.query(ExchangeRate.date, ExchangeRate.rate)
@@ -29,9 +33,9 @@ def get_cross_rates(db, base, target):
             .order_by(ExchangeRate.date)
             .all()
         )
-        return [1 / r.rate for r in rates]
+        return [(r.date, 1 / r.rate) for r in rates]
 
-    # cross-rate case
+    # cross-rate
     base_rates = (
         db.query(ExchangeRate.date, ExchangeRate.rate)
         .filter(
@@ -52,7 +56,12 @@ def get_cross_rates(db, base, target):
         .all()
     )
 
+    n = min(len(base_rates), len(target_rates))
+
     return [
-        target_rates[i].rate / base_rates[i].rate
-        for i in range(min(len(base_rates), len(target_rates)))
+        (
+            base_rates[i].date,
+            target_rates[i].rate / base_rates[i].rate
+        )
+        for i in range(n)
     ]
