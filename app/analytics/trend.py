@@ -1,29 +1,18 @@
 import numpy as np
-from sqlalchemy.orm import Session
-from app.models.exchange_rate import ExchangeRate
+from app.analytics.rates import get_cross_rates
 
 
-def detect_trend(db: Session, base: str, target: str):
+def detect_trend(db, base, target):
 
-    rates = (
-        db.query(ExchangeRate.rate)
-        .filter(
-            ExchangeRate.base_currency == base,
-            ExchangeRate.target_currency == target
-        )
-        .order_by(ExchangeRate.date.desc())
-        .limit(60)
-        .all()
-    )
+    prices = get_cross_rates(db, base, target)
 
-    # extract values
-    rates = [r[0] for r in rates]
-
-    if len(rates) < 60:
+    if len(prices) < 60:
         return "insufficient data"
 
-    recent_avg = np.mean(rates[:30])
-    older_avg = np.mean(rates[30:60])
+    prices = prices[-60:]
+
+    recent_avg = np.mean(prices[-30:])
+    older_avg = np.mean(prices[:30])
 
     if recent_avg > older_avg:
         return "uptrend"

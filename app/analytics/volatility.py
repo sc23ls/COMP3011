@@ -1,28 +1,14 @@
 import numpy as np
-from sqlalchemy.orm import Session
-from app.models.exchange_rate import ExchangeRate
+from app.analytics.rates import get_cross_rates
 
 
-def calculate_volatility(db: Session, base: str, target: str):
+def calculate_volatility(db, base, target):
 
-    rates = (
-        db.query(ExchangeRate.rate)
-        .filter(
-            ExchangeRate.base_currency == base,
-            ExchangeRate.target_currency == target
-        )
-        .order_by(ExchangeRate.date)
-        .all()
-    )
-
-    prices = [r[0] for r in rates]
+    prices = get_cross_rates(db, base, target)
 
     if len(prices) < 2:
         return None
 
-    # calculate daily returns
     returns = np.diff(prices) / prices[:-1]
 
-    volatility = float(np.std(returns))
-
-    return volatility
+    return float(np.std(returns))
