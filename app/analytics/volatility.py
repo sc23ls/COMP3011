@@ -11,15 +11,18 @@ def calculate_volatility(db: Session, base: str, target: str):
             ExchangeRate.base_currency == base,
             ExchangeRate.target_currency == target
         )
+        .order_by(ExchangeRate.date)
         .all()
     )
 
-    # extract numeric values
-    rates = [r[0] for r in rates]
+    prices = [r[0] for r in rates]
 
-    if len(rates) < 2:
+    if len(prices) < 2:
         return None
 
-    volatility = float(np.std(rates))
+    # calculate daily returns
+    returns = np.diff(prices) / prices[:-1]
+
+    volatility = float(np.std(returns))
 
     return volatility

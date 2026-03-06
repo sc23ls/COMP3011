@@ -2,6 +2,8 @@ from fastapi import APIRouter
 from app.database import SessionLocal
 from app.analytics.volatility import calculate_volatility
 from app.analytics.trend import detect_trend
+from app.analytics.regime import detect_regime
+
 
 router = APIRouter()
 
@@ -37,4 +39,24 @@ def get_trend(base: str, target: str):
         "base": base,
         "target": target,
         "trend": trend
+    }
+
+@router.get("/regime")
+def get_regime(base: str, target: str):
+
+    db = SessionLocal()
+
+    result = detect_regime(db, base, target)
+
+    db.close()
+
+    if result is None:
+        return {"error": "Insufficient data"}
+
+    return {
+        "base": base,
+        "target": target,
+        "trend": result["trend"],
+        "volatility": round(result["volatility"], 6),
+        "regime": result["regime"]
     }
