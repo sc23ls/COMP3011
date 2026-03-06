@@ -1,13 +1,15 @@
-# Forex Analytics API
+# Forex Analytics and Regime Detection API
 
-A REST API for analysing foreign exchange rates using historical datasets.
+A REST API for analysing foreign exchange markets using historical datasets.
 
 ## Features
 
-- Currency and exchange rate CRUD operations
-- Historical exchange rate analysis
-- Currency conversion endpoint
-- Volatility and trend analytics
+- Currency and exchange rate CRUD
+- Currency conversion
+- Volatility analytics
+- Trend detection
+- Market regime classification
+- Forecasting
 
 ## Tech Stack
 
@@ -15,7 +17,3 @@ A REST API for analysing foreign exchange rates using historical datasets.
 - PostgreSQL
 - SQLAlchemy
 - Python
-
-## Setup
-
-Instructions coming soon.
