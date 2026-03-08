@@ -5,6 +5,7 @@ from app.models.exchange_rate import ExchangeRate
 from app.routers import conversion, analytics
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth
+from app.routers import rates
 
 app = FastAPI(title="Forex Analytics API")
 
@@ -21,6 +22,7 @@ Base.metadata.create_all(bind=engine)
 app.include_router(conversion.router)
 app.include_router(analytics.router)
 app.include_router(auth.router)
+app.include_router(rates.router)
 
 
 @app.get("/")
