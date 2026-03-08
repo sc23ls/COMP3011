@@ -1,6 +1,6 @@
 from jose import jwt
 from passlib.context import CryptContext
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer
 from jose import jwt
@@ -27,7 +27,7 @@ def create_token(data: dict):
 
     to_encode = data.copy()
 
-    expire = datetime.utcnow() + timedelta(hours=2)
+    expire = datetime.now(UTC) + timedelta(hours=2)
 
     to_encode.update({"exp": expire})
 
