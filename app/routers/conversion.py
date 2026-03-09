@@ -1,19 +1,22 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.database import SessionLocal
 from app.models.exchange_rate import ExchangeRate
 
 router = APIRouter()
 
 
 @router.get("/convert")
-def convert_currency(base: str, target: str, amount: float, db: Session = Depends(get_db)):
+def convert_currency(base: str, target: str, amount: float):
+
+    db: Session = SessionLocal()
 
     base = base.upper()
     target = target.upper()
 
     # if currencies are the same
     if base == target:
+        db.close()
         return {
             "base": base,
             "target": target,
@@ -43,6 +46,8 @@ def convert_currency(base: str, target: str, amount: float, db: Session = Depend
         .order_by(ExchangeRate.date.desc())
         .first()
     )
+
+    db.close()
 
     # handle cases where currency isn't found
     if base != "EUR" and not base_rate:

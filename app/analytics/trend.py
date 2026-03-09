@@ -8,17 +8,25 @@ def detect_trend(db, base, target):
 
     prices = [r[1] for r in series]
 
-    if len(prices) < 60:
+    if len(prices) < 30:
         return "insufficient data"
 
-    prices = prices[-60:]
+    prices = list(reversed(prices[-30:]))
 
-    recent_avg = np.mean(prices[-30:])
-    older_avg = np.mean(prices[:30])
+    # print("FIRST PRICE:", prices[0])
+    # print("LAST PRICE:", prices[-1])
+    # print("CHANGE:", prices[-1] - prices[0])
 
-    if recent_avg > older_avg:
+    start_price = prices[0]
+    end_price = prices[-1]
+
+    change = end_price - start_price
+
+    threshold = 0.0005
+
+    if change > threshold:
         return "uptrend"
-    elif recent_avg < older_avg:
+    elif change < -threshold:
         return "downtrend"
     else:
         return "stable"
