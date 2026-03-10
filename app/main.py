@@ -3,7 +3,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db
-from app.models import currency, exchange_rate
 from app.models.exchange_rate import ExchangeRate
 from app.routers import conversion, analytics
 from fastapi.middleware.cors import CORSMiddleware
