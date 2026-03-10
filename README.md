@@ -135,15 +135,16 @@ pip install -r requirements.txt
 
 ------------------------------------------------------------------------
 
-### 4. Populate the database
+### 4. Database
 
-Import the ECB dataset:
+The repository includes a pre-populated SQLite database (`forex.db`)
+containing historical exchange rate data from the ECB dataset.
 
-``` bash
+This allows the API to run immediately without additional setup.
+
+If required, the database can be rebuilt from the dataset using:
+
 python -m app.services.import_data
-```
-
-This loads historical exchange rate data into the SQLite database.
 
 ------------------------------------------------------------------------
 

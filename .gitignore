@@ -1,5 +1,25 @@
+# virtual environments
+.venv/
+venv/
+
+# python cache
 __pycache__/
 *.pyc
-.env
-.venv/
+*.pyo
+*.pyd
+
+# macOS
 .DS_Store
+
+# testing
+.pytest_cache/
+
+# environment variables
+.env
+
+# vscode
+.vscode/
+
+# database temp files
+*.db-journal
+
