@@ -1,5 +1,8 @@
-from fastapi import FastAPI
-from app.database import engine, Base, SessionLocal
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.database import Base, engine, get_db
 from app.models import currency, exchange_rate
 from app.models.exchange_rate import ExchangeRate
 from app.routers import conversion, analytics
@@ -31,30 +34,30 @@ def root():
 
 
 @app.get("/rates/count")
-def rate_count():
-    db = SessionLocal()
-    count = db.query(ExchangeRate).count()
-    db.close()
-    return {"total_rates": count}
+def rate_count(db: Session = Depends(get_db)):
+    try:
+        count = db.query(ExchangeRate).count()
+        return {"total_rates": count}
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail="Database error while counting rates") from exc
 
 @app.get("/debug")
-def debug_rates():
-    db = SessionLocal()
-
-    rates = (
-        db.query(ExchangeRate)
-        .filter(
-            ExchangeRate.base_currency == "EUR",
-            ExchangeRate.target_currency == "USD"
+def debug_rates(db: Session = Depends(get_db)):
+    try:
+        rates = (
+            db.query(ExchangeRate)
+            .filter(
+                ExchangeRate.base_currency == "EUR",
+                ExchangeRate.target_currency == "USD"
+            )
+            .order_by(ExchangeRate.date.desc())
+            .limit(5)
+            .all()
         )
-        .order_by(ExchangeRate.date.desc())
-        .limit(5)
-        .all()
-    )
 
-    db.close()
-
-    return [
-        {"date": r.date, "rate": r.rate}
-        for r in rates
-    ]
+        return [
+            {"date": r.date, "rate": r.rate}
+            for r in rates
+        ]
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail="Database error while reading debug rates") from exc

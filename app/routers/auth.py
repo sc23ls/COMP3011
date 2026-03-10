@@ -1,56 +1,57 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import RegisterRequest, LoginRequest
-from app.services.auth import hash_password, verify_password, create_token
+from app.schemas.auth import LoginRequest, RegisterRequest
+from app.services.auth import create_token, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register")
-def register(request: RegisterRequest):
+def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    username = request.username.strip()
+    if not username:
+        raise HTTPException(status_code=422, detail="Username cannot be empty")
 
-    db: Session = SessionLocal()
+    try:
+        existing = db.query(User).filter(User.username == username).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already exists")
 
-    existing = db.query(User).filter(User.username == request.username).first()
+        user = User(
+            username=username,
+            password=hash_password(request.password),
+        )
 
-    if existing:
-        db.close()
-        raise HTTPException(status_code=400, detail="Username already exists")
-
-    user = User(
-        username=request.username,
-        password=hash_password(request.password)
-    )
-
-    db.add(user)
-    db.commit()
-
-    db.close()
-
-    return {"message": "User created successfully"}
+        db.add(user)
+        db.commit()
+        return {"message": "User created successfully"}
+    except HTTPException:
+        raise
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error while registering user") from exc
 
 
 @router.post("/login")
-def login(request: LoginRequest):
+def login(request: LoginRequest, db: Session = Depends(get_db)):
+    username = request.username.strip()
+    if not username:
+        raise HTTPException(status_code=422, detail="Username cannot be empty")
 
-    db: Session = SessionLocal()
+    try:
+        user = db.query(User).filter(User.username == username).first()
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail="Database error while fetching user") from exc
 
-    user = db.query(User).filter(User.username == request.username).first()
-
-    db.close()
-
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid username or password")
-
-    if not verify_password(request.password, user.password):
+    if not user or not verify_password(request.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     token = create_token({"sub": user.username})
-
     return {
         "access_token": token,
-        "token_type": "bearer"
+        "token_type": "bearer",
     }

@@ -3,8 +3,11 @@ from app.models.exchange_rate import ExchangeRate
 
 def get_cross_rates(db, base, target):
 
-    base = base.upper()
-    target = target.upper()
+    base = str(base).strip().upper()
+    target = str(target).strip().upper()
+
+    if not base or not target:
+        return []
 
     if base == target:
         return []
@@ -33,7 +36,7 @@ def get_cross_rates(db, base, target):
             .order_by(ExchangeRate.date)
             .all()
         )
-        return [(r.date, 1 / r.rate) for r in rates]
+        return [(r.date, 1 / r.rate) for r in rates if r.rate not in (None, 0)]
 
     # cross-rate
     base_rates = (
@@ -56,12 +59,20 @@ def get_cross_rates(db, base, target):
         .all()
     )
 
-    n = min(len(base_rates), len(target_rates))
+    base_by_date = {
+        rate.date: rate.rate
+        for rate in base_rates
+        if rate.rate not in (None, 0)
+    }
+    target_by_date = {
+        rate.date: rate.rate
+        for rate in target_rates
+        if rate.rate is not None
+    }
+
+    shared_dates = sorted(set(base_by_date).intersection(target_by_date))
 
     return [
-        (
-            base_rates[i].date,
-            target_rates[i].rate / base_rates[i].rate
-        )
-        for i in range(n)
+        (rate_date, target_by_date[rate_date] / base_by_date[rate_date])
+        for rate_date in shared_dates
     ]

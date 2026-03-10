@@ -73,27 +73,52 @@ canvas{
 const API = "http://127.0.0.1:8000"
 
 
+async function fetchJson(endpoint){
+
+    const response = await fetch(`${API}${endpoint}`)
+    let data = null
+
+    try{
+        data = await response.json()
+    }
+    catch(_error){
+        data = null
+    }
+
+    if(!response.ok){
+        const message = data?.detail || data?.error || `Request failed (${response.status})`
+        throw new Error(message)
+    }
+
+    return data
+}
+
+
 async function loadCurrencies(){
 
-    let response = await fetch(`${API}/currencies`)
-    let data = await response.json()
+    try{
+        let data = await fetchJson("/currencies")
 
-    let baseSelect = document.getElementById("base")
-    let targetSelect = document.getElementById("target")
+        let baseSelect = document.getElementById("base")
+        let targetSelect = document.getElementById("target")
 
-    data.currencies.forEach(currency => {
+        data.currencies.forEach(currency => {
 
-        let option1 = document.createElement("option")
-        option1.value = currency
-        option1.text = currency
-        baseSelect.appendChild(option1)
+            let option1 = document.createElement("option")
+            option1.value = currency
+            option1.text = currency
+            baseSelect.appendChild(option1)
 
-        let option2 = document.createElement("option")
-        option2.value = currency
-        option2.text = currency
-        targetSelect.appendChild(option2)
+            let option2 = document.createElement("option")
+            option2.value = currency
+            option2.text = currency
+            targetSelect.appendChild(option2)
 
-    })
+        })
+    }
+    catch(err){
+        document.getElementById("conversion").innerText = `Error loading currencies: ${err.message}`
+    }
 
 }
 
@@ -103,6 +128,16 @@ function trendArrow(trend){
     if(trend === "uptrend") return "↑ Uptrend"
     if(trend === "downtrend") return "↓ Downtrend"
     return "→ Stable"
+
+}
+
+
+function clearChart(){
+
+    if(window.chart){
+        window.chart.destroy()
+        window.chart = null
+    }
 
 }
 
@@ -120,41 +155,49 @@ async function convert(){
 
     try{
 
-        let conversion = await fetch(`${API}/convert?base=${base}&target=${target}&amount=${amount}`)
-        let convData = await conversion.json()
+        let convData = await fetchJson(`/convert?base=${base}&target=${target}&amount=${amount}`)
 
         document.getElementById("conversion").innerText =
             "Converted amount: " + convData.converted
 
+        if(base === target){
+            document.getElementById("volatility").innerText =
+                "Volatility: N/A (same currency pair)"
+            document.getElementById("trend").innerText =
+                "Trend: N/A (same currency pair)"
+            document.getElementById("regime").innerText =
+                "Market regime: N/A (same currency pair; rate is always 1)"
+            clearChart()
+            return
+        }
 
-        let vol = await fetch(`${API}/volatility?base=${base}&target=${target}`)
-        let volData = await vol.json()
+
+        let volData = await fetchJson(`/volatility?base=${base}&target=${target}`)
 
         document.getElementById("volatility").innerText =
             "Volatility: " + volData.volatility
 
 
-        let trend = await fetch(`${API}/trend?base=${base}&target=${target}`)
-        let trendData = await trend.json()
+        let trendData = await fetchJson(`/trend?base=${base}&target=${target}`)
 
         document.getElementById("trend").innerText =
             "Trend: " + trendArrow(trendData.trend)
 
 
-        let regime = await fetch(`${API}/regime?base=${base}&target=${target}`)
-        let regimeData = await regime.json()
+        let regimeData = await fetchJson(`/regime?base=${base}&target=${target}`)
 
         document.getElementById("regime").innerText =
             "Market regime: " + regimeData.regime
 
 
-        loadHistory(base, target)
+        await loadHistory(base, target)
 
     }
     catch(err){
 
         document.getElementById("conversion").innerText =
-            "Error contacting API"
+            "Error: " + err.message
+        clearChart()
 
     }
 
@@ -163,34 +206,39 @@ async function convert(){
 
 async function loadHistory(base, target){
 
-    let response = await fetch(`${API}/history?base=${base}&target=${target}&days=30`)
-    let data = await response.json()
+    try{
+        let data = await fetchJson(`/history?base=${base}&target=${target}&days=30`)
 
-    let dates = data.rates.map(r => r.date)
-    let prices = data.rates.map(r => r.rate)
+        let dates = data.rates.map(r => r.date)
+        let prices = data.rates.map(r => r.rate)
 
-    const ctx = document.getElementById('priceChart').getContext('2d')
+        const ctx = document.getElementById('priceChart').getContext('2d')
 
-    if(window.chart){
-        window.chart.destroy()
-    }
-
-    window.chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: dates.reverse(),
-            datasets: [{
-                label: `${base}/${target}`,
-                data: prices.reverse(),
-                borderColor: 'blue',
-                borderWidth: 2,
-                fill: false
-            }]
-        },
-        options: {
-            responsive: true
+        if(window.chart){
+            window.chart.destroy()
         }
-    })
+
+        window.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates.reverse(),
+                datasets: [{
+                    label: `${base}/${target}`,
+                    data: prices.reverse(),
+                    borderColor: 'blue',
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        })
+    }
+    catch(err){
+        document.getElementById("regime").innerText = "History unavailable: " + err.message
+        clearChart()
+    }
 
 }
 

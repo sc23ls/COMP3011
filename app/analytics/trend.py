@@ -6,7 +6,7 @@ def detect_trend(db, base, target):
 
     series = get_cross_rates(db, base, target)
 
-    prices = [r[1] for r in series]
+    prices = [rate for _, rate in series if rate is not None and np.isfinite(rate)]
 
     if len(prices) < 30:
         return "insufficient data"

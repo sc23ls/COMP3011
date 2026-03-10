@@ -6,11 +6,20 @@ def calculate_volatility(db, base, target):
 
     series = get_cross_rates(db, base, target)
 
-    prices = [r[1] for r in series]
+    prices = [rate for _, rate in series if rate is not None and rate > 0]
 
     if len(prices) < 2:
         return None
 
-    returns = np.diff(prices) / prices[:-1]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        returns = np.diff(prices) / prices[:-1]
 
-    return float(np.std(returns))
+    returns = returns[np.isfinite(returns)]
+    if returns.size == 0:
+        return None
+
+    volatility = float(np.std(returns))
+    if not np.isfinite(volatility):
+        return None
+
+    return volatility
