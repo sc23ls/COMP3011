@@ -33,6 +33,8 @@ functionality**.
 -   MCP tool server integration for conversion and analytics tools
 -   Error handling and input validation
 
+Docs: https://github.com/sc23ls/COMP3011/blob/main/API_Documentation.pdf 
+
 ------------------------------------------------------------------------
 
 ## Analytics Endpoints
