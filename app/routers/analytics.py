@@ -115,23 +115,16 @@ def latest_rate(base: str, target: str, db: Session = Depends(get_db)):
     ensure_distinct_pair(base, target)
 
     try:
-        rate = (
-            db.query(ExchangeRate)
-            .filter(
-                ExchangeRate.base_currency == base,
-                ExchangeRate.target_currency == target,
-            )
-            .order_by(ExchangeRate.date.desc())
-            .first()
-        )
-        if not rate:
+        series = get_cross_rates(db, base, target)
+        if not series:
             raise HTTPException(status_code=404, detail="Rate not found")
 
+        latest_date, latest_rate_value = series[-1]
         return {
             "base": base,
             "target": target,
-            "date": rate.date,
-            "rate": rate.rate,
+            "date": latest_date,
+            "rate": latest_rate_value,
         }
     except HTTPException:
         raise

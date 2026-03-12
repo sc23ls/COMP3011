@@ -10,24 +10,96 @@
 
 body{
     font-family: Arial, sans-serif;
-    margin:40px;
+    margin:32px;
+    background:#f5f7fa;
+    color:#1f2937;
+}
+
+h1, h2{
+    margin-bottom:10px;
+}
+
+.card{
+    background:#ffffff;
+    border:1px solid #d9dee6;
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:16px;
+}
+
+.row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+    margin-bottom:8px;
+}
+
+label{
+    font-size:14px;
 }
 
 input, select, button{
-    padding:8px;
-    margin:5px;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid #c7ced9;
+    background:#fff;
 }
 
 button{
     cursor:pointer;
 }
 
-.results{
-    margin-top:20px;
+button.primary{
+    background:#0d6efd;
+    border-color:#0d6efd;
+    color:#fff;
+}
+
+button.danger{
+    background:#b42318;
+    border-color:#b42318;
+    color:#fff;
+}
+
+.muted{
+    color:#667085;
+    font-size:13px;
+}
+
+.status{
+    margin-top:6px;
+    min-height:20px;
+}
+
+.status.error{
+    color:#b42318;
+}
+
+.status.success{
+    color:#067647;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+th, td{
+    border:1px solid #e4e7ec;
+    padding:6px 8px;
+    text-align:left;
+    font-size:13px;
 }
 
 canvas{
-    margin-top:20px;
+    margin-top:10px;
+    max-width:100%;
+}
+
+.hidden{
+    display:none;
 }
 
 </style>
@@ -37,98 +109,196 @@ canvas{
 <body>
 
 <h1>Forex Analytics Dashboard</h1>
+<p class="muted">Includes public analytics, authenticated profile management, and protected rates CRUD actions.</p>
 
-<div>
+<div class="card">
+    <h2>Authentication</h2>
+    <div class="row">
+        <strong id="authState">Not logged in</strong>
+    </div>
 
-<label>Base currency:</label>
-<select id="base"></select>
+    <div id="guestAuthActions">
+        <div class="row">
+            <label>Register username:</label>
+            <input id="registerUsername" placeholder="Username">
+            <label>Password:</label>
+            <input id="registerPassword" type="password" placeholder="Password">
+            <label>Confirm:</label>
+            <input id="registerConfirmPassword" type="password" placeholder="Confirm password">
+            <button onclick="registerUser()">Register</button>
+        </div>
 
-<label>Target currency:</label>
-<select id="target"></select>
+        <div class="row">
+            <label>Login username:</label>
+            <input id="loginUsername" placeholder="Username">
+            <label>Password:</label>
+            <input id="loginPassword" type="password" placeholder="Password">
+            <button class="primary" onclick="loginUser()">Login</button>
+        </div>
+    </div>
 
-<label>Amount:</label>
-<input id="amount" type="number" value="100">
+    <div class="row hidden" id="userAuthActions">
+        <button onclick="logoutUser()">Logout</button>
+    </div>
 
-<button onclick="convert()">Convert</button>
-
+    <div id="authStatus" class="status"></div>
 </div>
 
-<div class="results">
+<div class="card hidden" id="profileCard">
+    <h2>Profile (Authenticated)</h2>
+    <div class="row">
+        <label>New username:</label>
+        <input id="profileUsername" placeholder="leave blank to keep current">
+    </div>
 
-<h2>Results</h2>
+    <div class="row">
+        <label>Current password:</label>
+        <input id="profileCurrentPassword" type="password" placeholder="required for password change">
+        <label>New password:</label>
+        <input id="profileNewPassword" type="password" placeholder="New password">
+        <label>Confirm new password:</label>
+        <input id="profileConfirmNewPassword" type="password" placeholder="Confirm new password">
+        <button class="primary" onclick="updateProfile()">Update Profile</button>
+    </div>
 
-<p id="conversion"></p>
-<p id="volatility"></p>
-<p id="trend"></p>
-<p id="regime"></p>
-
+    <div id="profileStatus" class="status"></div>
 </div>
 
-<h2>Exchange Rate History (Latest 30 Observations)</h2>
+<div class="card">
+    <h2>Convert + Analytics</h2>
+    <div class="row">
+        <label>Base:</label>
+        <select id="base"></select>
+        <label>Target:</label>
+        <select id="target"></select>
+        <label>Amount:</label>
+        <input id="amount" type="number" value="100" min="0.01" step="0.01">
+        <label>History days:</label>
+        <input id="historyDays" type="number" value="30" min="1" max="365">
+        <button class="primary" onclick="convert()">Run Analysis</button>
+    </div>
 
-<canvas id="priceChart" width="600" height="300"></canvas>
+    <p id="conversion"></p>
+    <p id="latestRate"></p>
+    <p id="volatility"></p>
+    <p id="trend"></p>
+    <p id="regime"></p>
+
+    <h3>Exchange Rate History</h3>
+    <canvas id="priceChart" width="800" height="300"></canvas>
+</div>
+
+<div class="card">
+    <h2>Rates CRUD</h2>
+    <p class="muted" id="ratesGuestHint">Search is public. Login to create, delete, and view protected summaries.</p>
+    <p class="muted hidden" id="ratesUserHint">You are logged in. Protected CRUD actions are available.</p>
+    <p class="muted hidden" id="ratesAdminHint">Admin actions are available.</p>
+
+    <div class="row">
+        <label>Search Base:</label>
+        <input id="searchBase" value="EUR">
+        <label>Search Target:</label>
+        <input id="searchTarget" value="USD">
+        <label>Limit:</label>
+        <input id="searchLimit" type="number" value="10" min="1" max="200">
+        <button onclick="searchRates()">Search Rates</button>
+    </div>
+
+    <div id="protectedRateActions" class="hidden">
+        <div class="row">
+            <label>Create Base:</label>
+            <input id="createBase" value="EUR">
+            <label>Create Target:</label>
+            <input id="createTarget" value="USD">
+            <label>Rate:</label>
+            <input id="createRate" type="number" value="1.1" step="0.0001" min="0.0001">
+            <label>Date:</label>
+            <input id="createDate" type="date">
+            <button class="primary" onclick="createRateEntry()">Create Rate</button>
+            <button onclick="loadRateSummary()">Load Protected Summary</button>
+        </div>
+
+        <div class="row">
+            <label>Delete rate ID:</label>
+            <input id="deleteRateId" type="number" min="1" placeholder="Rate ID">
+            <button class="danger" onclick="deleteRateEntry()">Delete Rate</button>
+        </div>
+    </div>
+
+    <div id="adminRateActions" class="hidden">
+        <div class="row">
+            <label>Admin bulk delete IDs:</label>
+            <input id="bulkDeleteIds" placeholder="e.g. 123,124,125">
+            <button class="danger" onclick="bulkDeleteRates()">Bulk Delete (Admin)</button>
+        </div>
+    </div>
+
+    <div id="rateStatus" class="status"></div>
+    <pre id="rateSummary" class="muted"></pre>
+    <div id="searchResults"></div>
+</div>
 
 <script>
 
-const API = ""
-
-
-async function fetchJson(endpoint){
-
-    const response = await fetch(`${API}${endpoint}`)
-    let data = null
-
-    try{
-        data = await response.json()
-    }
-    catch(_error){
-        data = null
+function detectApiBase(){
+    const configuredBase = localStorage.getItem("forex_api_base")
+    if(configuredBase && configuredBase.trim()){
+        return configuredBase.trim().replace(/\/$/, "")
     }
 
-    if(!response.ok){
-        const message = data?.detail || data?.error || `Request failed (${response.status})`
-        throw new Error(message)
+    const isLocalHost =
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname === "localhost" ||
+        window.location.hostname === ""
+
+    if(window.location.protocol === "file:"){
+        return "http://127.0.0.1:8000"
     }
 
-    return data
+    if(isLocalHost && window.location.port && window.location.port !== "8000"){
+        return "http://127.0.0.1:8000"
+    }
+
+    return ""
+}
+
+const API = detectApiBase()
+const TOKEN_STORAGE_KEY = "forex_auth_token"
+
+let authToken = localStorage.getItem(TOKEN_STORAGE_KEY) || ""
+let activeUser = null
+
+
+function setVisibility(id, show){
+    const element = document.getElementById(id)
+    if(!element){
+        return
+    }
+
+    if(show){
+        element.classList.remove("hidden")
+    }
+    else{
+        element.classList.add("hidden")
+    }
 }
 
 
-async function loadCurrencies(){
-
-    try{
-        let data = await fetchJson("/currencies")
-
-        let baseSelect = document.getElementById("base")
-        let targetSelect = document.getElementById("target")
-
-        data.currencies.forEach(currency => {
-
-            let option1 = document.createElement("option")
-            option1.value = currency
-            option1.text = currency
-            baseSelect.appendChild(option1)
-
-            let option2 = document.createElement("option")
-            option2.value = currency
-            option2.text = currency
-            targetSelect.appendChild(option2)
-
-        })
+function setAuthToken(token){
+    authToken = token || ""
+    if(authToken){
+        localStorage.setItem(TOKEN_STORAGE_KEY, authToken)
     }
-    catch(err){
-        document.getElementById("conversion").innerText = `Error loading currencies: ${err.message}`
+    else{
+        localStorage.removeItem(TOKEN_STORAGE_KEY)
     }
-
 }
 
 
-function trendArrow(trend){
-
-    if(trend === "uptrend") return "↑ Uptrend"
-    if(trend === "downtrend") return "↓ Downtrend"
-    return "→ Stable"
-
+function setStatus(elementId, message, isError=false){
+    const element = document.getElementById(elementId)
+    element.innerText = message || ""
+    element.className = `status ${isError ? "error" : "success"}`
 }
 
 
@@ -142,90 +312,329 @@ function clearChart(){
 }
 
 
-async function convert(){
+async function fetchJson(endpoint, options = {}){
+    const method = options.method || "GET"
+    const authRequired = Boolean(options.auth)
 
-    let base = document.getElementById("base").value
-    let target = document.getElementById("target").value
-    let amount = document.getElementById("amount").value
+    const headers = Object.assign({}, options.headers || {})
+    if(options.body !== undefined){
+        headers["Content-Type"] = "application/json"
+    }
+    if(authRequired){
+        if(!authToken){
+            throw new Error("Please login first")
+        }
+        headers["Authorization"] = `Bearer ${authToken}`
+    }
+
+    const response = await fetch(`${API}${endpoint}`, {
+        method,
+        headers,
+        body: options.body !== undefined ? JSON.stringify(options.body) : undefined
+    })
+
+    let data = null
+    try{
+        data = await response.json()
+    }
+    catch(_error){
+        data = null
+    }
+
+    if(!response.ok){
+        if(authRequired && response.status === 401){
+            setAuthToken("")
+            activeUser = null
+            updateAuthUi()
+        }
+        const message = data?.detail || data?.error || `Request failed (${response.status})`
+        throw new Error(message)
+    }
+
+    return data
+}
+
+
+function updateAuthUi(){
+    const authState = document.getElementById("authState")
+    const isLoggedIn = Boolean(activeUser && authToken)
+    const isAdmin = isLoggedIn && activeUser.username.toLowerCase() === "admin"
+
+    if(isLoggedIn){
+        authState.innerText = `Logged in as ${activeUser.username}`
+    }
+    else{
+        authState.innerText = "Not logged in"
+    }
+
+    setVisibility("guestAuthActions", !isLoggedIn)
+    setVisibility("userAuthActions", isLoggedIn)
+    setVisibility("profileCard", isLoggedIn)
+    setVisibility("protectedRateActions", isLoggedIn)
+    setVisibility("adminRateActions", isAdmin)
+    setVisibility("ratesGuestHint", !isLoggedIn)
+    setVisibility("ratesUserHint", isLoggedIn && !isAdmin)
+    setVisibility("ratesAdminHint", isAdmin)
+
+    if(!isLoggedIn){
+        document.getElementById("rateSummary").innerText = ""
+    }
+}
+
+
+function trendArrow(trend){
+
+    if(trend === "uptrend") return "↑ Uptrend"
+    if(trend === "downtrend") return "↓ Downtrend"
+    return "→ Stable"
+
+}
+
+
+function renderRateTable(items){
+    const container = document.getElementById("searchResults")
+    if(!items || items.length === 0){
+        container.innerHTML = "<p class='muted'>No rates found.</p>"
+        return
+    }
+
+    const rows = items.map(item => `
+        <tr>
+            <td>${item.id}</td>
+            <td>${item.base_currency}</td>
+            <td>${item.target_currency}</td>
+            <td>${item.rate}</td>
+            <td>${item.date}</td>
+        </tr>
+    `).join("")
+
+    container.innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Base</th>
+                    <th>Target</th>
+                    <th>Rate</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `
+}
+
+
+async function loadProfile(){
+    if(!authToken){
+        activeUser = null
+        updateAuthUi()
+        return
+    }
+
+    try{
+        activeUser = await fetchJson("/auth/me", {auth: true})
+        updateAuthUi()
+    }
+    catch(err){
+        activeUser = null
+        updateAuthUi()
+        setStatus("authStatus", `Session expired: ${err.message}`, true)
+    }
+}
+
+
+async function registerUser(){
+    const username = document.getElementById("registerUsername").value.trim()
+    const password = document.getElementById("registerPassword").value
+    const confirmPassword = document.getElementById("registerConfirmPassword").value
+
+    try{
+        const result = await fetchJson("/auth/register", {
+            method: "POST",
+            body: {
+                username: username,
+                password: password,
+                confirm_password: confirmPassword
+            }
+        })
+        setStatus("authStatus", result.message || "Registered successfully")
+    }
+    catch(err){
+        setStatus("authStatus", `Register failed: ${err.message}`, true)
+    }
+}
+
+
+async function loginUser(){
+    const username = document.getElementById("loginUsername").value.trim()
+    const password = document.getElementById("loginPassword").value
+
+    try{
+        const result = await fetchJson("/auth/login", {
+            method: "POST",
+            body: {username, password}
+        })
+
+        setAuthToken(result.access_token)
+        await loadProfile()
+        setStatus("authStatus", "Login successful")
+    }
+    catch(err){
+        setStatus("authStatus", `Login failed: ${err.message}`, true)
+    }
+}
+
+
+function logoutUser(){
+    setAuthToken("")
+    activeUser = null
+    updateAuthUi()
+    setStatus("profileStatus", "")
+    setStatus("rateStatus", "")
+    setStatus("authStatus", "Logged out")
+}
+
+
+async function updateProfile(){
+    const newUsername = document.getElementById("profileUsername").value.trim()
+    const currentPassword = document.getElementById("profileCurrentPassword").value
+    const newPassword = document.getElementById("profileNewPassword").value
+    const confirmNewPassword = document.getElementById("profileConfirmNewPassword").value
+
+    const payload = {}
+    if(newUsername){
+        payload.username = newUsername
+    }
+    if(currentPassword || newPassword || confirmNewPassword){
+        payload.current_password = currentPassword
+        payload.new_password = newPassword
+        payload.confirm_new_password = confirmNewPassword
+    }
+
+    if(Object.keys(payload).length === 0){
+        setStatus("profileStatus", "No profile changes to submit", true)
+        return
+    }
+
+    try{
+        const result = await fetchJson("/auth/me", {
+            method: "PUT",
+            auth: true,
+            body: payload
+        })
+
+        if(result.access_token){
+            setAuthToken(result.access_token)
+        }
+        activeUser = {id: result.id, username: result.username}
+        updateAuthUi()
+
+        document.getElementById("profileCurrentPassword").value = ""
+        document.getElementById("profileNewPassword").value = ""
+        document.getElementById("profileConfirmNewPassword").value = ""
+
+        setStatus("profileStatus", result.message || "Profile updated")
+    }
+    catch(err){
+        setStatus("profileStatus", `Update failed: ${err.message}`, true)
+    }
+}
+
+
+async function loadCurrencies(){
+    try{
+        const data = await fetchJson("/currencies")
+        const baseSelect = document.getElementById("base")
+        const targetSelect = document.getElementById("target")
+
+        baseSelect.innerHTML = ""
+        targetSelect.innerHTML = ""
+
+        data.currencies.forEach(currency => {
+            const option1 = document.createElement("option")
+            option1.value = currency
+            option1.text = currency
+            baseSelect.appendChild(option1)
+
+            const option2 = document.createElement("option")
+            option2.value = currency
+            option2.text = currency
+            targetSelect.appendChild(option2)
+        })
+
+        baseSelect.value = "EUR"
+        targetSelect.value = "USD"
+    }
+    catch(err){
+        document.getElementById("conversion").innerText = `Error loading currencies: ${err.message}`
+    }
+}
+
+
+async function convert(){
+    const base = document.getElementById("base").value
+    const target = document.getElementById("target").value
+    const amount = Number(document.getElementById("amount").value)
+    const days = Number(document.getElementById("historyDays").value)
 
     document.getElementById("conversion").innerText = "Loading..."
+    document.getElementById("latestRate").innerText = ""
     document.getElementById("volatility").innerText = ""
     document.getElementById("trend").innerText = ""
     document.getElementById("regime").innerText = ""
 
     try{
-
-        let convData = await fetchJson(`/convert?base=${base}&target=${target}&amount=${amount}`)
-
-        document.getElementById("conversion").innerText =
-            "Converted amount: " + convData.converted
+        const convData = await fetchJson(`/convert?base=${base}&target=${target}&amount=${amount}`)
+        document.getElementById("conversion").innerText = `Converted amount: ${convData.converted}`
 
         if(base === target){
-            document.getElementById("volatility").innerText =
-                "Volatility: N/A (same currency pair)"
-            document.getElementById("trend").innerText =
-                "Trend: N/A (same currency pair)"
-            document.getElementById("regime").innerText =
-                "Market regime: N/A (same currency pair; rate is always 1)"
+            document.getElementById("latestRate").innerText = "Latest rate: 1 (same currency)"
+            document.getElementById("volatility").innerText = "Volatility: N/A (same currency pair)"
+            document.getElementById("trend").innerText = "Trend: N/A (same currency pair)"
+            document.getElementById("regime").innerText = "Market regime: N/A (same currency pair; rate is always 1)"
             clearChart()
             return
         }
 
+        const latest = await fetchJson(`/latest?base=${base}&target=${target}`)
+        const volatility = await fetchJson(`/volatility?base=${base}&target=${target}`)
+        const trend = await fetchJson(`/trend?base=${base}&target=${target}`)
+        const regime = await fetchJson(`/regime?base=${base}&target=${target}`)
 
-        let volData = await fetchJson(`/volatility?base=${base}&target=${target}`)
+        document.getElementById("latestRate").innerText = `Latest rate (${latest.date}): ${latest.rate}`
+        document.getElementById("volatility").innerText = `Volatility: ${volatility.volatility}`
+        document.getElementById("trend").innerText = `Trend: ${trendArrow(trend.trend)}`
+        document.getElementById("regime").innerText = `Market regime: ${regime.regime}`
 
-        document.getElementById("volatility").innerText =
-            "Volatility: " + volData.volatility
-
-
-        let trendData = await fetchJson(`/trend?base=${base}&target=${target}`)
-
-        document.getElementById("trend").innerText =
-            "Trend: " + trendArrow(trendData.trend)
-
-
-        let regimeData = await fetchJson(`/regime?base=${base}&target=${target}`)
-
-        document.getElementById("regime").innerText =
-            "Market regime: " + regimeData.regime
-
-
-        await loadHistory(base, target)
-
+        await loadHistory(base, target, days)
     }
     catch(err){
-
-        document.getElementById("conversion").innerText =
-            "Error: " + err.message
+        document.getElementById("conversion").innerText = `Error: ${err.message}`
         clearChart()
-
     }
-
 }
 
 
-async function loadHistory(base, target){
-
+async function loadHistory(base, target, days){
     try{
-        let data = await fetchJson(`/history?base=${base}&target=${target}&days=30`)
-
-        let dates = data.rates.map(r => r.date)
-        let prices = data.rates.map(r => r.rate)
-
-        const ctx = document.getElementById('priceChart').getContext('2d')
+        const data = await fetchJson(`/history?base=${base}&target=${target}&days=${days}`)
+        const dates = data.rates.map(r => r.date)
+        const prices = data.rates.map(r => r.rate)
+        const ctx = document.getElementById("priceChart").getContext("2d")
 
         if(window.chart){
             window.chart.destroy()
         }
 
         window.chart = new Chart(ctx, {
-            type: 'line',
+            type: "line",
             data: {
-                labels: dates.reverse(),
+                labels: dates,
                 datasets: [{
                     label: `${base}/${target}`,
-                    data: prices.reverse(),
-                    borderColor: 'blue',
+                    data: prices,
+                    borderColor: "#0d6efd",
                     borderWidth: 2,
                     fill: false
                 }]
@@ -236,14 +645,153 @@ async function loadHistory(base, target){
         })
     }
     catch(err){
-        document.getElementById("regime").innerText = "History unavailable: " + err.message
+        document.getElementById("regime").innerText = `History unavailable: ${err.message}`
         clearChart()
     }
-
 }
 
 
-loadCurrencies()
+async function searchRates(){
+    const base = document.getElementById("searchBase").value.trim()
+    const target = document.getElementById("searchTarget").value.trim()
+    const limit = Number(document.getElementById("searchLimit").value) || 10
+
+    const params = new URLSearchParams()
+    if(base){
+        params.set("base_currency", base)
+    }
+    if(target){
+        params.set("target_currency", target)
+    }
+    params.set("limit", String(limit))
+
+    try{
+        const data = await fetchJson(`/rates/search?${params.toString()}`)
+        renderRateTable(data.items)
+        setStatus("rateStatus", `Loaded ${data.count} rates (total matches: ${data.total})`)
+    }
+    catch(err){
+        setStatus("rateStatus", `Search failed: ${err.message}`, true)
+    }
+}
+
+
+async function createRateEntry(){
+    const baseCurrency = document.getElementById("createBase").value
+    const targetCurrency = document.getElementById("createTarget").value
+    const rateValue = Number(document.getElementById("createRate").value)
+    const dateValue = document.getElementById("createDate").value
+
+    try{
+        const created = await fetchJson("/rates/", {
+            method: "POST",
+            auth: true,
+            body: {
+                base_currency: baseCurrency,
+                target_currency: targetCurrency,
+                rate: rateValue,
+                date: dateValue
+            }
+        })
+        setStatus("rateStatus", `Created rate with ID ${created.id}`)
+        await searchRates()
+    }
+    catch(err){
+        setStatus("rateStatus", `Create failed: ${err.message}`, true)
+    }
+}
+
+
+async function deleteRateEntry(){
+    const id = Number(document.getElementById("deleteRateId").value)
+    if(!id){
+        setStatus("rateStatus", "Please provide a valid rate ID", true)
+        return
+    }
+
+    try{
+        const result = await fetchJson(`/rates/${id}`, {
+            method: "DELETE",
+            auth: true
+        })
+        setStatus("rateStatus", result.message || "Rate deleted")
+        await searchRates()
+    }
+    catch(err){
+        setStatus("rateStatus", `Delete failed: ${err.message}`, true)
+    }
+}
+
+
+async function loadRateSummary(){
+    const base = document.getElementById("searchBase").value.trim()
+    const target = document.getElementById("searchTarget").value.trim()
+    const params = new URLSearchParams()
+    if(base){
+        params.set("base_currency", base)
+    }
+    if(target){
+        params.set("target_currency", target)
+    }
+
+    try{
+        const summary = await fetchJson(`/rates/stats/summary?${params.toString()}`, {auth: true})
+        document.getElementById("rateSummary").innerText = JSON.stringify(summary, null, 2)
+        setStatus("rateStatus", "Summary loaded")
+    }
+    catch(err){
+        document.getElementById("rateSummary").innerText = ""
+        setStatus("rateStatus", `Summary failed: ${err.message}`, true)
+    }
+}
+
+
+async function bulkDeleteRates(){
+    const rawIds = document.getElementById("bulkDeleteIds").value
+    const ids = rawIds
+        .split(",")
+        .map(value => Number(value.trim()))
+        .filter(value => Number.isInteger(value) && value > 0)
+
+    if(ids.length === 0){
+        setStatus("rateStatus", "Enter at least one valid numeric ID", true)
+        return
+    }
+
+    try{
+        const result = await fetchJson("/rates/bulk", {
+            method: "DELETE",
+            auth: true,
+            body: {ids}
+        })
+        setStatus("rateStatus", `Deleted ${result.deleted} rates`)
+        document.getElementById("bulkDeleteIds").value = ""
+        await searchRates()
+    }
+    catch(err){
+        setStatus("rateStatus", `Bulk delete failed: ${err.message}`, true)
+    }
+}
+
+
+function setDefaultCreateDate(){
+    const createDateInput = document.getElementById("createDate")
+    if(!createDateInput.value){
+        createDateInput.value = new Date().toISOString().split("T")[0]
+    }
+}
+
+
+async function initializeDashboard(){
+    setDefaultCreateDate()
+    updateAuthUi()
+    await loadProfile()
+    await loadCurrencies()
+    await searchRates()
+}
+
+
+initializeDashboard()
 
 </script>
 

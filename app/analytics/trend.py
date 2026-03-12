@@ -11,11 +11,8 @@ def detect_trend(db, base, target):
     if len(prices) < 30:
         return "insufficient data"
 
-    prices = list(reversed(prices[-30:]))
-
-    # print("FIRST PRICE:", prices[0])
-    # print("LAST PRICE:", prices[-1])
-    # print("CHANGE:", prices[-1] - prices[0])
+    # get_cross_rates returns chronological data, so keep oldest->newest order
+    prices = prices[-30:]
 
     start_price = prices[0]
     end_price = prices[-1]
