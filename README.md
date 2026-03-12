@@ -28,7 +28,9 @@ functionality**.
 -   Volatility analysis of exchange rate movements
 -   Market regime classification based on trend and volatility
 -   JWT-based authentication
--   CRUD operations on database models
+-   User profile endpoints (`/auth/me`) for reading/updating account details
+-   CRUD operations on exchange rates (search, summary, bulk create/delete, partial updates)
+-   MCP tool server integration for conversion and analytics tools
 -   Error handling and input validation
 
 ------------------------------------------------------------------------
@@ -49,6 +51,12 @@ functionality**.
 
   `/regime`                           Combine trend and volatility to
                                       classify the market regime
+
+  `/latest`                           Get latest cross rate for a pair
+
+  `/history`                          Return historical series for a pair
+
+  `/currencies`                       List available currencies
   -----------------------------------------------------------------------
 
 These endpoints allow users to analyse **time-series characteristics of
@@ -94,9 +102,15 @@ analytics logic, database models, schemas, and services.
     tests/
     └── pytest test suite
 
+    mcp_server.py
+    forex.db
+
 ------------------------------------------------------------------------
 
 ## Setup Instructions
+
+Deployed at https://forexanalyticstool.onrender.com/
+Alternatively to run locally:
 
 ### 1. Clone the repository
 
@@ -154,7 +168,7 @@ python -m app.services.import_data
 uvicorn app.main:app --reload
 ```
 
-The API will be available at:
+The API and frontend will be available at:
 
     http://127.0.0.1:8000
 
@@ -185,6 +199,14 @@ Log in
 
     POST /auth/login
 
+View profile (authenticated)
+
+    GET /auth/me
+
+Update profile (authenticated)
+
+    PUT /auth/me
+
 Authorize requests in Swagger using:
 
     Bearer <token>
@@ -194,7 +216,8 @@ Authorize requests in Swagger using:
 ## CRUD Operations
 
 The API supports full **Create, Read, Update, Delete (CRUD)** operations
-on database models.
+on exchange rates, including search/filtering, partial updates, and bulk
+operations.
 
   Operation   Method
   ----------- --------
@@ -205,6 +228,16 @@ on database models.
 
 These operations demonstrate integration between the API layer and the
 relational database.
+
+Key routes include:
+
+-   `GET /rates/` and `GET /rates/{rate_id}`
+-   `GET /rates/search`
+-   `POST /rates/` and `POST /rates/bulk` (authenticated)
+-   `PUT /rates/{rate_id}` and `PATCH /rates/{rate_id}` (authenticated)
+-   `DELETE /rates/{rate_id}` (authenticated)
+-   `DELETE /rates/bulk` (admin-only)
+-   `GET /rates/stats/summary` (authenticated)
 
 ------------------------------------------------------------------------
 
@@ -248,8 +281,37 @@ Features include:
 -   conversion tool
 -   exchange rate chart
 -   analytics display (trend, volatility, regime)
+-   user registration/login/logout
+-   authenticated profile update (username/password)
+-   authenticated and role-aware CRUD controls (including admin-only actions)
 
 The dashboard communicates with the API using HTTP requests.
+
+------------------------------------------------------------------------
+
+## MCP Connection
+
+An MCP server is provided in `mcp_server.py` using the `mcp` Python SDK.
+It exposes these tools:
+
+-   `convert_currency(base, target, amount)`
+-   `detect_trend(base, target)`
+-   `calculate_volatility(base, target)`
+
+Before starting MCP, run the API:
+
+``` bash
+uvicorn app.main:app --reload
+```
+
+Then start the MCP server:
+
+``` bash
+python mcp_server.py
+```
+
+By default, the MCP server calls `http://127.0.0.1:8000`. If your API is
+running elsewhere, update `API_BASE_URL` in `mcp_server.py`.
 
 ------------------------------------------------------------------------
 
@@ -272,6 +334,5 @@ report.
 Potential future improvements include:
 
 -   additional financial indicators
--   cloud deployment
 -   enhanced frontend visualisations
 -   performance optimisation
